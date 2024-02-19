@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, abort, request
+from datetime import datetime
 from ..models import Task, User, db
 
 import traceback
@@ -27,11 +28,14 @@ def create():
     # user with id of user_id must exist
     u = User.query.get_or_404(request.json['created_by_user'], "User not found")
 
+    # Convert the deadline string to a Python date object
+    deadline_date = datetime.strptime(request.json['deadline'], '%Y-%m-%d').date()
+
     # construct Task without assigning it to anyone initially
     t = Task(
         title=request.json['title'],
         description=request.json['description'],
-        deadline=request.json['deadline'],
+        deadline=deadline_date,
         status=request.json['status'],
         created_by_user=request.json['created_by_user']
     )
@@ -42,7 +46,7 @@ def create():
 
         # Note: Do not assign the task to the user automatically here
 
-        return jsonify(t.serialize())
+        return jsonify(t.serialize()), 201
     except Exception as e:
         # Handle any exceptions, e.g., rollback changes
         db.session.rollback()
@@ -69,10 +73,10 @@ def update(id: int):
 
     try:
         db.session.commit()  # save updates to the database
-        return jsonify(t.serialize())
-    except:
-        # something went wrong :(
-        return jsonify(False)
+        return jsonify(t.serialize()), 200  # Return 200 OK
+    except Exception as e:
+        # Return error message in JSON format along with 500 status code
+        return jsonify({'error': str(e)}), 500  # 500 Internal Server Error
 
 @bp.route('/<int:id>', methods=['DELETE']) 
 def delete(id: int):
@@ -85,6 +89,7 @@ def delete(id: int):
     except Exception as e:
         # Handle any exceptions, e.g., rollback changes
         db.session.rollback()
+        print('500 Error: ', e)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/<int:id>/assign_to/<int:user_id>', methods=['POST'])
