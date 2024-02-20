@@ -50,6 +50,8 @@ def create_app(test_config=None):
     if test_config is None:
         # Load the default config when not testing
         app.config.from_pyfile('config.py', silent=True)
+        # Set the default database URI for non-testing environments
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres@localhost:5432/task_management_system'
     else:
         # Load the test config if passed in
         app.config.update(test_config)
